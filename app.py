@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from modules.profiler import profile_dataset
+from modules.model_evaluator import evaluate_model
 
 
 st.set_page_config(
@@ -33,6 +34,78 @@ if uploaded_file is not None:
 
         else:
             st.success("Dataset uploaded successfully!")
+            st.subheader("7. ML Evaluation Setup")
+
+            target_column = st.selectbox(
+                "Select the target column",
+                options=df.columns
+            )
+
+            st.write("Selected target:", target_column)
+            st.write("Target data type:", df[target_column].dtype)
+            st.write("Unique target values:", df[target_column].nunique())
+
+# Suggest a task type based on the selected target
+            target_dtype = df[target_column].dtype
+            unique_values = df[target_column].nunique()
+
+            if target_dtype == "object" or str(target_dtype) == "category" or target_dtype == "bool":
+                suggested_task = "Classification"
+            elif unique_values <= 10:
+                suggested_task = "Classification"
+            else:
+                suggested_task = "Regression"
+
+            st.subheader("ML Task Selection")
+
+            task_type = st.selectbox(
+                "Choose the machine learning task",
+                options=["Classification", "Regression"],
+                index=["Classification", "Regression"].index(suggested_task)
+            )
+
+
+
+            st.write("Suggested task:", suggested_task)
+            st.write("Selected task:", task_type)
+
+            st.subheader("Baseline Model Evaluation")
+
+            if st.button("Run Baseline Evaluation"):
+
+                try:
+                    with st.spinner("Training and evaluating the model..."):
+
+                        result = evaluate_model(
+                            df=df,
+                            target_column=target_column,
+                            task_type=task_type
+                        )
+
+                    st.success("Model evaluation completed!")
+
+                    st.write("Training rows:", result["train_rows"])
+                    st.write("Testing rows:", result["test_rows"])
+
+                    if result["excluded_columns"]:
+                        st.info(
+                            "Excluded identifier-like columns: "
+                            + ", ".join(result["excluded_columns"])
+                        )
+
+                    st.subheader("Evaluation Metrics")
+
+                    metric_columns = st.columns(len(result["metrics"]))
+
+                    for column, (metric_name, metric_value) in zip(
+                        metric_columns, result["metrics"].items()
+                    ):
+                        column.metric(metric_name, f"{metric_value:.4f}")
+
+                except Exception as error:
+                    st.error(f"Evaluation failed: {error}")
+
+
 
             # Dataset preview
             st.subheader("1. Dataset Preview")
