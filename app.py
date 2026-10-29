@@ -3,6 +3,7 @@ import pandas as pd
 
 from modules.profiler import profile_dataset
 from modules.model_evaluator import evaluate_model
+from modules.leakage_detector import detect_potential_leakage
 
 
 st.set_page_config(
@@ -68,6 +69,29 @@ if uploaded_file is not None:
 
             st.write("Suggested task:", suggested_task)
             st.write("Selected task:", task_type)
+            st.subheader("Potential Data Leakage Detection")
+
+            leakage_results = detect_potential_leakage(
+                df=df,
+                target_column=target_column
+            )
+
+            if leakage_results.empty:
+                st.success(
+                    "No suspicious features detected by the current checks. "
+                    "This does not guarantee that the dataset is leakage-free."
+                )
+            else:
+                st.warning(
+                    f"Found {len(leakage_results)} suspicious feature(s) "
+                    "that need investigation."
+                )
+
+                st.dataframe(
+                    leakage_results,
+                    use_container_width=True,
+                    hide_index=True
+                )
 
             st.subheader("Baseline Model Evaluation")
 
